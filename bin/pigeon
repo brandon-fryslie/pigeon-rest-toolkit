@@ -1,3 +1,39 @@
-#!/usr/bin/env node
+#!/usr/bin/env coffee
 
-require('../index.js');
+require('colors')
+
+args = require('minimist')(process.argv.splice(1))
+
+if args.debug # handle opening electron window
+  executable_path = require('electron-prebuilt')
+
+  entry_path = process.env.HOME + '/projects/pigeon-rest-toolkit'
+  entry_path = '/Users/bfryslie/projects/pigeon-rest-toolkit/electron'
+
+  electron_proc = require('child_process').spawn(executable_path, [entry_path])
+
+  util = require('../src/util')
+
+  util.pipe_with_filter electron_proc.stdout, process.stdout, (line) -> line
+
+  blacklist = [
+    /INFO:renderer_main.cc/,
+    /source: chrome-devtools/,
+    /chromestatus/
+  ]
+
+  util.pipe_with_filter electron_proc.stderr, process.stderr, (line) ->
+
+    for item in blacklist when line.match item
+      return false
+
+    # this is console output from our stuff
+    result = line.match /CONSOLE\(\d\)\] "(.*)", source: (.*) \(\d\)/
+    if result?
+      [match, content, source] = result
+      return "#{content}"
+
+    line
+
+else
+  require('../src/toolkit.coffee')
