@@ -1,6 +1,6 @@
 var app = require('app');
 var Menu = require('menu');
-var MenuItem = require('menu-item');
+// var MenuItem = require('menu-item');
 var BrowserWindow = require('browser-window');
 
 require('crash-reporter').start();
@@ -24,9 +24,11 @@ app.on('ready', function() {
     mainWindow = null;
   });
 
+  mainWindow.toggleDevTools();
+
   // Example of menu from official sample
   // https://github.com/atom/electron/blob/master/atom/browser/default_app/default_app.js
-  if (process.platform == 'darwin') {
+  if (process.platform === 'darwin') {
     var template = [{
       label: 'Electron',
       submenu: [{
@@ -191,22 +193,22 @@ app.on('ready', function() {
       submenu: [{
         label: 'Learn More',
         click: function() {
-          require('shell').openExternal('http://electron.atom.io')
+          require('shell').openExternal('http://electron.atom.io');
         }
       }, {
         label: 'Documentation',
         click: function() {
-          require('shell').openExternal('https://github.com/atom/electron/tree/master/docs#readme')
+          require('shell').openExternal('https://github.com/atom/electron/tree/master/docs#readme');
         }
       }, {
         label: 'Community Discussions',
         click: function() {
-          require('shell').openExternal('https://discuss.atom.io/c/electron')
+          require('shell').openExternal('https://discuss.atom.io/c/electron');
         }
       }, {
         label: 'Search Issues',
         click: function() {
-          require('shell').openExternal('https://github.com/atom/electron/issues')
+          require('shell').openExternal('https://github.com/atom/electron/issues');
         }
       }]
     }];
