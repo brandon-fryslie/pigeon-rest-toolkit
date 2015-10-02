@@ -4,7 +4,7 @@
   "description": "Toolkit for communicating with Pigeon's REST API",
   "main": "index.js",
   "scripts": {
-    "start": "./node_modules/electron-prebuilt/dist/Electron.app/Contents/MacOS/Electron ."
+    "dev": "./bin/pigeon --debug"
   },
   "author": "Rally Software",
   "license": "ISC",
