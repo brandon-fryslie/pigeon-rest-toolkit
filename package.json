@@ -13,6 +13,8 @@
     "backbone-model": "^1.0.9",
     "coffee-script": "^1.10.0",
     "colors": "^1.1.2",
+    "lodash": "^3.10.1",
+    "q": "^1.4.1",
     "unirest": "^0.4.2",
     "zepto": "0.0.4"
   },
