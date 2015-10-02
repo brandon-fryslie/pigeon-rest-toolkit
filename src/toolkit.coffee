@@ -1,15 +1,39 @@
 rest = require 'unirest'
 
-SERVER = 'https://mistaf.testn.f4tech.com'
+# SERVER = 'https://mistaf.testn.f4tech.com'
+SERVER = 'https://rally1.rallydev.com'
 
 
-class pigeon
+class Pigeon
 
-  constructor: ->
-    @pigeonUrl = "#{SERVER}/notifications/"
+  constructor: (@wsapi) ->
+    @pigeonUrl = "#{SERVER}/notifications/api/v1"
 
-  watch: (uuid) ->
-    rest.post(@pigeonUrl).send()
+  getWatches: (userUUID) ->
+    # @wsapi.gimmeToken().then (token) =>
+      rest
+      .get("#{@pigeonUrl}/watch/user/#{userUUID}")
+      .jar(true)
+      .send()
+      .end (response) ->
+        debugger
+
+  # watch: (uuid) ->
+  #   @wsapi.gimmeToken().then((token) =>
+  #     watchUrl = "#{@pigeonUrl}/watch/#{uuid}"
+  #     console.log 'sending request...', watchUrl
+  #     # CookieJar = rest.jar()
+  #     # CookieJar.add("key=#{token}", '/')
+  #     rest
+  #     .post(watchUrl)
+  #     .header('Cookie', "ZSESSIONID=#{token};")
+  #     .send()
+  #     .end (response) =>
+
+  #       debugger
+  #   ).fail((error) ->
+  #     debugger
+  #   )
 
 Wsapi = require('./WsapiRequest.coffee')
 wsapi = new Wsapi
@@ -20,17 +44,25 @@ wsapi = new Wsapi
       pass: 'Password'
       sendImmediately: false
 
-
 init = (cli_args) ->
-  console.log 'Toolkit running!'
 
-  wsapi.get(url: 'artifact').then (result) ->
+  pigeon = new Pigeon wsapi
 
-    a_bunch_of_artifacts = result.Results
+  pigeon.getWatches 'b4054c42-d62b-42fc-9956-bb1473f31221'
 
-    console.log "sucess. found #{result.TotalResultCount} artifacts"
-  , (err) ->
-    console.log 'you fail'
+
+  # wsapi.get(url: 'artifact').then (result) ->
+
+  #   a_bunch_of_artifacts = result.Results
+  #   uuid = a_bunch_of_artifacts[0]._refObjectUUID
+
+  #   console.log "watching #{a_bunch_of_artifacts[0]._refObjectName} #{uuid}"
+
+  #   pigeon.watch uuid
+
+  #   console.log "sucess. found #{result.TotalResultCount} artifacts"
+  # , (err) ->
+  #   console.log 'you fail'
 
 
 module.exports =
