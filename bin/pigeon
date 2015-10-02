@@ -7,19 +7,20 @@ args = require('minimist')(process.argv.splice(1))
 if args.debug # handle opening electron window
   executable_path = require('electron-prebuilt')
 
-  entry_path = process.env.HOME + '/projects/pigeon-rest-toolkit'
-  entry_path = '/Users/bfryslie/projects/pigeon-rest-toolkit/electron'
+  entry_path = process.env.HOME + '/projects/pigeon-rest-toolkit/electron'
 
-  electron_proc = require('child_process').spawn(executable_path, [entry_path])
+  electron_proc = require('child_process').spawn executable_path, [entry_path]
 
   util = require('../src/util')
 
+  # this does not seem to get any output...
   util.pipe_with_filter electron_proc.stdout, process.stdout, (line) -> line
 
   blacklist = [
-    /INFO:renderer_main.cc/,
-    /source: chrome-devtools/,
+    /INFO:renderer_main.cc/
+    /source: chrome-devtools/
     /chromestatus/
+    /ipc_message_attachment_set.cc/
   ]
 
   util.pipe_with_filter electron_proc.stderr, process.stderr, (line) ->
@@ -28,7 +29,7 @@ if args.debug # handle opening electron window
       return false
 
     # this is console output from our stuff
-    result = line.match /CONSOLE\(\d\)\] "(.*)", source: (.*) \(\d\)/
+    result = line.match /CONSOLE\(\d+\)\] "(.*)", source: (.*) \(\d+\)/
     if result?
       [match, content, source] = result
       return "#{content}"
@@ -36,4 +37,7 @@ if args.debug # handle opening electron window
     line
 
 else
-  require('../src/toolkit.coffee')
+  toolkit = require('../src/toolkit.coffee')
+
+  toolkit.wsapi.gimmeToken().then (token) ->
+    console.log token
