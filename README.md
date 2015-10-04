@@ -20,7 +20,7 @@ var Pigeon = toolkit.Pigeon
 var Query = toolkit.WsapiQuery
 
 var pigeon = new Pigeon({
-  server: 'rally1.rallydev.com',
+  server: 'https://mistaf',
   username: 'jimmy@rallydev.com',
   password: 'very_secure_password'
 });

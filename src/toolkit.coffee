@@ -22,19 +22,70 @@ class Pigeon
 
     deferred.promise
 
-
   getWatches: (user_uuid) ->
     @request('get', "#{@pigeonUrl}/watch/user/#{user_uuid}").then (response) ->
       debugger
 
   getWatchRule: (artifact_uuid) ->
 
-  watch: (user_uuid, artifact_uuid) ->
+  get_uuid_for_user: (username) ->
+    @wsapi.get(url: 'user/', qs: query: Query.where('UserName', '=', username).toQueryString()).then (result) ->
+      result.Results?[0]._refObjectUUID
+
+  # options can optionaly contain a username or a wsapi query
+  watch: (options = {}) ->
+    wsapiOpts = {url: 'artifact', fetch: 'UserName'}
+
+    if options.query?
+      query = options.query
+      console.log "Fetching artifacts with query string #{query}..."
+      wsapiOpts.qs = query: query
+
+    watch_user = options.username ? @wsapi.username
+
+    @get_uuid_for_user(watch_user).then (user_uuid) =>
+
+      @wsapi.get(wsapiOpts).then((result) =>
+          uuids = _.pluck(result.Results, '_refObjectUUID')
+
+          console.log "Found #{result.TotalResultCount} artifacts."
+          console.log "Watching #{uuids.length} artifacts for #{watch_user}..."
+
+          watches = _.map uuids, (artifact_uuid) =>
+            @_watch(user_uuid, artifact_uuid)
+
+          Q.all(watches)
+      )
+
+    # options can optionaly contain a username or a wsapi query
+  unwatch: (options = {}) ->
+    wsapiOpts = {url: 'artifact', fetch: 'UserName'}
+
+    if options.query?
+      query = options.query
+      console.log "Fetching artifacts with query string #{query}..."
+      wsapiOpts.qs = query: query
+
+    @get_uuid_for_user(options.username ? @wsapi.username).then (user_uuid) =>
+
+      @wsapi.get(wsapiOpts).then (result) =>
+        uuids = _.pluck(result.Results, '_refObjectUUID')
+
+        console.log "Found #{result.TotalResultCount} artifacts."
+        console.log "Unwatching #{uuids.length} artifacts..."
+
+        watches = _.map uuids, (artifact_uuid) =>
+          @_unwatch(user_uuid, artifact_uuid)
+
+        Q.all(watches)
+
+  # Internal methods operate only on UUIDs
+  _watch: (user_uuid, artifact_uuid) ->
     @request('post', "#{@pigeonUrl}/watch/#{artifact_uuid}/user/#{user_uuid}")
 
-  unwatch: (user_uuid, artifact_uuid) ->
+  # Internal methods operate only on UUIDs
+  _unwatch: (user_uuid, artifact_uuid) ->
     @request('delete', "#{@pigeonUrl}/watch/#{artifact_uuid}/user/#{user_uuid}")
-
 
 get_current_user_uuid = (wsapi) ->
   wsapi.get(url: 'user').then (result) -> result.ObjectUUID
@@ -47,120 +98,11 @@ init = (cli_args) ->
 
   Wsapi = require('./WsapiRequest.coffee')
   wsapi = new Wsapi
+    username: username
+    password: password
     server: server
-    requestOptions:
-      auth:
-        user: username
-        pass: password
-        sendImmediately: false
 
-  pigeon = new Pigeon wsapi
-
-  getWatches = (user_uuid) ->
-    pigeon.getWatches()
-
-
-  watch = (user_uuid) ->
-
-      query_keys = _(cli_args).keys().without('_').value()
-
-      queries = for key in query_keys
-        Query.where(key, 'contains', cli_args[key])
-
-      wsapi_query_string = _.reduce(queries, (accum, query) -> accum.and query)?.toQueryString() ? ''
-
-      query_string = fetch: _.uniq(['FormattedID', 'Name'].concat(query_keys)).join(',')
-      if wsapi_query_string.length > 0
-        query_string.query = wsapi_query_string
-
-      console.log "Fetching artifacts with query string #{wsapi_query_string}..."
-
-      wsapi.get(
-        url: 'artifact'
-        qs: query_string
-      ).then((result) ->
-          uuids = _.pluck(result.Results, '_refObjectUUID')
-
-          console.log "Found #{result.TotalResultCount} artifacts."
-          console.log "Watching #{uuids.length} artifacts..."
-
-          watches = _.map uuids, (artifact_uuid) ->
-            pigeon.watch(user_uuid, artifact_uuid).then (response) ->
-              debugger
-
-
-          Q.all(watches).then((results) ->
-
-            successes = _.filter(results, {status: 200});
-            alreadyWatched = _.filter(results, {status: 409});
-            failed = _.filter results, (result) -> "#{result.status}".match /^[^2]/ and result.status isnt 409
-
-            debugger
-
-            console.log "Results: #{successes.length} watched. #{alreadyWatched.length} already watched. #{failed.length} failed."
-          ).fail (error) ->
-            debugger
-      ).catch (error) ->
-        debugger
-
-  unwatch = (user_uuid) ->
-
-      query_keys = _(cli_args).keys().without('_').value()
-
-      queries = for key in query_keys
-        Query.where(key, 'contains', cli_args[key])
-
-      wsapi_query_string = _.reduce(queries, (accum, query) -> accum.and query)?.toQueryString() ? ''
-
-      query_string = fetch: _.uniq(['FormattedID', 'Name'].concat(query_keys)).join(',')
-      if wsapi_query_string.length > 0
-        query_string.query = wsapi_query_string
-
-      wsapi.get(
-        url: 'artifact'
-        qs: query_string
-      ).then((result) ->
-          uuids = _.pluck(result.Results, '_refObjectUUID')
-
-          console.log "Found #{result.TotalResultCount} artifacts."
-          console.log "Unwatching #{uuids.length} artifacts..."
-
-          watches = _.map uuids, (artifact_uuid) -> pigeon.unwatch user_uuid, artifact_uuid
-
-          Q.all(watches).then (results) ->
-
-            successes = _.filter(results, {status: 200});
-            alreadyUnwatched = _.filter(results, {status: 404});
-            failed = _.filter results, (result) -> "#{result.status}".match(/^[^2]/) and result.status isnt 404
-
-            debugger
-
-            console.log "Results: #{successes.length} unwatched. #{alreadyUnwatched.length} were already not watched. #{failed.length} failed."
-
-      ).catch (error) ->
-        debugger
-
-  user_id = get_current_user_uuid(wsapi).then (user_uuid) ->
-
-    switch cli_args._[0]
-      when 'getWatches' then getWatches user_uuid
-      when 'watch' then watch user_uuid
-      when 'unwatch' then unwatch user_uuid
-      else
-        debugger
-
-  #   a_bunch_of_artifacts = result.Results
-  #   uuid = a_bunch_of_artifacts[0]._refObjectUUID
-
-  #   console.log "watching #{a_bunch_of_artifacts[0]._refObjectName} #{uuid}"
-
-  #   pigeon.watch uuid
-
-  #   console.log "sucess. found #{result.TotalResultCount} artifacts"
-  # , (err) ->
-  #   console.log 'you fail'
-  # , (error) ->
-  #   debugger
+  new Pigeon wsapi
 
 module.exports =
   init: init

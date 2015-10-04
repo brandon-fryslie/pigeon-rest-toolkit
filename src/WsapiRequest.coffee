@@ -18,8 +18,11 @@ class Wsapi
 
   constructor: (options = {}) ->
     @server = options.server
+    @username = options.username
+    @password = options.password
     @wsapiUrl = "#{@server}/slm/webservice/v#{API_VERSION}"
-    @httpRequest = request.defaults(_.merge({}, options.requestOptions, @defaultRequestOptions))
+
+    @httpRequest = request.defaults(_.merge({auth: {user: options.username, pass: options.password, sendImmediately: false}}, @defaultRequestOptions))
 
   gimmeToken: ->
     deferred = Q.defer()
@@ -36,7 +39,7 @@ class Wsapi
       token = body.OperationResult?.SecurityToken
 
       if !token? or token.length < 10
-        deferred.reject msg: 'Could not find token in body', body: body
+        deferred.reject 'Invalid username / password!'
 
       @_token = token
       deferred.resolve token
@@ -50,6 +53,8 @@ class Wsapi
 
   doRequest: (method, options) ->
     deferred = Q.defer()
+
+    console.log 'do wsapi request', method, options
 
     requestOpts = _.extend {}, options, url: "#{@wsapiUrl}/#{options.url}"
 

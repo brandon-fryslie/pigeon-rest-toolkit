@@ -1,5 +1,9 @@
-var toolkit = require('./toolkit')
+require('coffee-script/register');
+var toolkit = require('./src/toolkit');
+var query = require('./lib/WsapiQuery');
+
 
 module.exports = {
-  test: 'asdf'
-}
+  init: toolkit.init,
+  Query: query
+};
