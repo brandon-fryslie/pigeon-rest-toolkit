@@ -7,6 +7,7 @@ API_VERSION = '2.x'
 class Wsapi
 
   defaultRequestOptions:
+    jar: true
     json: true
     gzip: true
     headers:
@@ -18,7 +19,7 @@ class Wsapi
   constructor: (options = {}) ->
     @server = options.server
     @wsapiUrl = "#{@server}/slm/webservice/v#{API_VERSION}"
-    @httpRequest = request.defaults(_.merge({jar: true}, options.requestOptions, @defaultRequestOptions))
+    @httpRequest = request.defaults(_.merge({}, options.requestOptions, @defaultRequestOptions))
 
   gimmeToken: ->
     deferred = Q.defer()
@@ -44,7 +45,7 @@ class Wsapi
 
   doSecuredRequest: (method, options) ->
     @gimmeToken().then((token) =>
-      @doRequest(method, options)
+      @doRequest(method, _.merge({qs: key: token}, options))
     )
 
   doRequest: (method, options) ->
