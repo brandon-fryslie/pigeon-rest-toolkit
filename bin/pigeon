@@ -39,7 +39,4 @@ if args.debug # handle opening electron window
     line
 
 else
-  toolkit = require('../src/toolkit.coffee').init(args);
-
-  toolkit.wsapi.gimmeToken().then (token) ->
-    console.log token
+  require('../src/toolkit.coffee').init(args);
