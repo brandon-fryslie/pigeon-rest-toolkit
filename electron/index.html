@@ -14,7 +14,9 @@
 
 <script>
 require('coffee-script/register');
-require('../src/toolkit.coffee').init();
+var minimist = require('minimist');
+var args = minimist(require('remote').process.argv.slice(2));
+require('../src/toolkit.coffee').init(args);
 </script>
 
 </html>

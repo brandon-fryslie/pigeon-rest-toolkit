@@ -2,14 +2,16 @@
 
 require('colors')
 
-args = require('minimist')(process.argv.splice(1))
+args = require('minimist')(process.argv[2..])
 
 if args.debug # handle opening electron window
   executable_path = require('electron-prebuilt')
 
-  entry_path = process.env.HOME + '/projects/pigeon-rest-toolkit/electron'
+  entry_path =  "#{process.env.HOME}/projects/pigeon-rest-toolkit/electron"
 
-  electron_proc = require('child_process').spawn executable_path, [entry_path]
+  args = [entry_path].concat(process.argv[3..])
+
+  electron_proc = require('child_process').spawn executable_path, args
 
   util = require('../src/util')
 
@@ -37,7 +39,7 @@ if args.debug # handle opening electron window
     line
 
 else
-  toolkit = require('../src/toolkit.coffee')
+  toolkit = require('../src/toolkit.coffee').init(args);
 
   toolkit.wsapi.gimmeToken().then (token) ->
     console.log token
