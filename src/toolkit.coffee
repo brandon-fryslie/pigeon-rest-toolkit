@@ -22,18 +22,31 @@ class Pigeon
 
     deferred.promise
 
-  getWatches: (user_uuid) ->
-    @request('get', "#{@pigeonUrl}/watch/user/#{user_uuid}").then (response) ->
-      debugger
+  getWatches: (username) ->
+    @get_uuid_for_user(username).then (user_uuid) =>
+      @request('get', "#{@pigeonUrl}/watch/user/#{user_uuid}")
 
-  getWatchRule: (artifact_uuid) ->
+  getWatchRules: (options) ->
+    watch_user = options.username ? @wsapi.username
+
+    @get_uuid_for_user(watch_user).then (user_uuid) =>
+
+      @_query_for_artifacts(options).then (results) ->
+        uuids = _.pluck(result.Results, '_refObjectUUID')
+
+        console.log "Getting watch rules for user #{watch_user}"
+
+        Q.all _.map uuids, (artifact_uuid) ->
+          @_getWatchRule user_uuid, artifact_uuid
+
+  _getWatchRule: (user_uuid, artifact_uuid) ->
+    @request('get', "#{@pigeonUrl}/watch/user/#{artifact_uuid}/#{user_uuid}")
 
   get_uuid_for_user: (username) ->
     @wsapi.get(url: 'user/', qs: query: Query.where('UserName', '=', username).toQueryString()).then (result) ->
       result.Results?[0]._refObjectUUID
 
-  # options can optionaly contain a username or a wsapi query
-  watch: (options = {}) ->
+  _query_for_artifacts: (options = {}) ->
     wsapiOpts = {url: 'artifact', fetch: 'UserName'}
 
     if options.query?
@@ -41,34 +54,35 @@ class Pigeon
       console.log "Fetching artifacts with query string #{query}..."
       wsapiOpts.qs = query: query
 
+      @wsapi.get(wsapiOpts)
+
+  # options can optionaly contain a username or a wsapi query
+  watch: (options = {}) ->
     watch_user = options.username ? @wsapi.username
 
     @get_uuid_for_user(watch_user).then (user_uuid) =>
 
-      @wsapi.get(wsapiOpts).then((result) =>
-          uuids = _.pluck(result.Results, '_refObjectUUID')
+      @_query_for_artifacts(options).then (result) =>
+        uuids = _.pluck(result.Results, '_refObjectUUID')
 
-          console.log "Found #{result.TotalResultCount} artifacts."
-          console.log "Watching #{uuids.length} artifacts for #{watch_user}..."
+        console.log "Found #{result.TotalResultCount} artifacts."
+        console.log "Watching #{uuids.length} artifacts for #{watch_user}..."
 
-          watches = _.map uuids, (artifact_uuid) =>
-            @_watch(user_uuid, artifact_uuid)
+        watches = _.map uuids, (artifact_uuid) =>
+          @_watch(user_uuid, artifact_uuid)
 
-          Q.all(watches)
-      )
+        Q.all(watches).then (results) ->
+          successful: _.filter results, status: 200
+          alreadyUnwatched: _.filter results, status: 409
+          failed: _.filter results, (result) -> result.status isnt 200 and result.status isnt 409
 
-    # options can optionaly contain a username or a wsapi query
+  # options can optionaly contain a username or a wsapi query
   unwatch: (options = {}) ->
-    wsapiOpts = {url: 'artifact', fetch: 'UserName'}
+    watch_user = options.username ? @wsapi.username
 
-    if options.query?
-      query = options.query
-      console.log "Fetching artifacts with query string #{query}..."
-      wsapiOpts.qs = query: query
+    @get_uuid_for_user(watch_user).then (user_uuid) =>
 
-    @get_uuid_for_user(options.username ? @wsapi.username).then (user_uuid) =>
-
-      @wsapi.get(wsapiOpts).then (result) =>
+      @_query_for_artifacts(options).then (result) =>
         uuids = _.pluck(result.Results, '_refObjectUUID')
 
         console.log "Found #{result.TotalResultCount} artifacts."
