@@ -17,7 +17,7 @@ var toolkit = require('pigeon-rest-toolkit');
 var pigeon = toolkit.init({
   server: 'http://rally.dev:8999',
   username: 'jimmy@rallydev.com',
-  password: 'Password',
+  password: 'very_secure_password',
   debug: true
 });
 

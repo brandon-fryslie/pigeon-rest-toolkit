@@ -23,6 +23,8 @@ class Wsapi
     @wsapiUrl = "#{@server}/slm/webservice/v#{API_VERSION}"
     @DEBUG = options.debug
 
+    @_log "Initialized WSAPI: #{@server} #{@username}"
+
     @httpRequest = request.defaults(_.merge({auth: {user: options.username, pass: options.password, sendImmediately: false}}, @defaultRequestOptions))
 
   _log: (args...) ->

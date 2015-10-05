@@ -1,12 +1,12 @@
 {
   "name": "pigeon-rest-toolkit",
   "version": "0.0.1",
-  "description": "Toolkit for communicating with Pigeon's REST API",
+  "description": "Toolkit for communicating with Rally Software Pigeon's REST API",
   "main": "index.js",
   "scripts": {
     "dev": "./bin/pigeon --debug"
   },
-  "author": "Rally Software",
+  "author": "Brandon Fryslie",
   "license": "ISC",
   "dependencies": {
     "backbone-collection": "^1.0.6",
