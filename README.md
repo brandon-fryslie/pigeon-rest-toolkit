@@ -1,6 +1,3 @@
-
-
-
 This toolkit allows you to script Rally's Pigeon REST Api to watch and unwatch artifacts, and to create webhooks rules (coming soon).
 
 #### Usage
@@ -13,20 +10,31 @@ To use, require the module and instantiate it with your options:
 
 ```javascript
 
-var toolkit = require('pigeon-rest-toolkit')
-var _ = require 'lodash'
+#!/usr/bin/env node
 
-var Pigeon = toolkit.Pigeon
-var Query = toolkit.WsapiQuery
+var toolkit = require('pigeon-rest-toolkit');
 
-var pigeon = new Pigeon({
-  server: 'https://mistaf',
+var pigeon = toolkit.init({
+  server: 'http://rally.dev:8999',
   username: 'jimmy@rallydev.com',
-  password: 'very_secure_password'
+  password: 'Password',
+  debug: true
 });
 
+var Query = toolkit.Query;
+
 pigeon.watch().then(function(results) {
-  // Watched Jimmy's first 20 artifacts
+  // Watched first 20 artifacts Jimmy has access to
+
+  console.log(results.successful.length + ' succeeded');
+  console.log(results.alreadyWatched.length + ' already watched');
+  console.log(results.failed.length + ' failed');
+});
+
+// Get the watches for a user
+pigeon.getWatches().then(function(results) {
+  var watches = results.body;
+  // console.log(watches);
 });
 
 pigeon.watch({
@@ -34,34 +42,39 @@ pigeon.watch({
 }).then(function(results) {
   // Added Bobby as a watcher to Jimmy's first 20 artifacts
 
-  var successfulResults = _.filter(results, {status: 200});
-  var alreadyWatched = _.filter(results, {status: 409});
-  var failed = _.filter(results, function(result) {
-    return result.status !== 200 || result.status !== 409;
-  });
+  console.log(results.successful.length + ' succeeded');
+  console.log(results.alreadyWatched.length + ' already watched');
+  console.log(results.failed.length + ' failed');
 });
 
 pigeon.watch({
-  username: 'bobby@rallydev.com'
-  query: Query.where('Name', 'contains', 'Iteration Status').and('ScheduleState', '<', 'Completed')
+  username: 'bobby@rallydev.com',
+  query: Query.where('Name', 'contains', 'Story').and('ScheduleState', '<', 'Completed').toQueryString()
 }).then(function(results) {
-  // Added Bobby as a watcher to artifacts where Name contains 'Iteration Status' and 'ScheduleState' is less than 'Completed'
+  // Added Bobby as a watcher to artifacts where Name contains 'Story' and 'ScheduleState' is less than 'Completed'
+
+  console.log(results.successful.length + ' succeeded');
+  console.log(results.alreadyWatched.length + ' already watched');
+  console.log(results.failed.length + ' failed');
 });
 
 pigeon.unwatch({
-  username: 'hans@rallydev.com'
-  query: Query.where('Project.Name', '=', 'AdminProject')
+  query: Query.where('Project.Name', '=', 'Sample Project').toQueryString(),
+  pagesize: 200
 }).then(function(results) {
-  // Remove Hans as a watcher from all stories in that project
+  // Remove Jimmy as a watcher from all stories in that project
+
+  console.log(results.successful.length + ' succeeded');
+  console.log(results.alreadyUnwatched.length + ' already unwatched');
+  console.log(results.failed.length + ' failed');
 });
 
-pigeon.unwatch({
-  username: 'hans@rallydev.com'
-  query: Query.where('Project.Name', '=', 'AdminProject')
+// Get all individual watch rules that match a query
+pigeon.getWatchRules({
+  query: Query.where('Project.Name', '=', 'Sample Project').toQueryString()
 }).then(function(results) {
-  // Remove Hans as a watcher from all stories in that project
+  // console.log('Results', results);
 });
-
 
 ```
 var pigeon

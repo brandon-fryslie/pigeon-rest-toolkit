@@ -17,10 +17,9 @@ class Pigeon
 
     @pigeonUrl = "#{@wsapi.server}/notifications/api/v1"
 
-
-  _log: (args) ->
+  _log: (args...) ->
     if @DEBUG
-      console.log.apply @, arguments
+      console.log.apply @, ['debug: '.red].concat args
 
   request: (method, url) ->
     deferred = Q.defer()
@@ -39,12 +38,13 @@ class Pigeon
     @get_uuid_for_user(username).then (user_uuid) =>
       @request('get', "#{@pigeonUrl}/watch/user/#{user_uuid}")
 
-  getWatchRules: (options) ->
+  getWatchRules: (options = {}) ->
     watch_user = options.username ? @wsapi.username
 
     @get_uuid_for_user(watch_user).then (user_uuid) =>
 
-      @_query_for_artifacts(options).then (results) ->
+      @_query_for_artifacts(options).then (result) ->
+
         uuids = _.pluck(result.Results, '_refObjectUUID')
 
         @_log "Getting watch rules for user #{watch_user}"
@@ -64,10 +64,20 @@ class Pigeon
   _query_for_artifacts: (options = {}) ->
     wsapiOpts = {url: 'artifact', fetch: 'UserName'}
 
+    if options.query? or options.pagesize?
+      wsapiOpts.qs = {}
+
     if options.query?
       query = options.query
       @_log "Fetching artifacts with query string #{query}..."
-      wsapiOpts.qs = query: query
+      wsapiOpts.qs.query = query
+
+    if options.pagesize?
+      pagesize = options.pagesize
+      @_log "Using pagesize #{pagesize}..."
+      wsapiOpts.qs.pagesize = pagesize
+
+    @_log "wsapiOpts", wsapiOpts
 
     @wsapi.get(wsapiOpts)
 
