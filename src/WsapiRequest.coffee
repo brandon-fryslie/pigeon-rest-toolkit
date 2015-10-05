@@ -21,8 +21,13 @@ class Wsapi
     @username = options.username
     @password = options.password
     @wsapiUrl = "#{@server}/slm/webservice/v#{API_VERSION}"
+    @DEBUG = options.debug
 
     @httpRequest = request.defaults(_.merge({auth: {user: options.username, pass: options.password, sendImmediately: false}}, @defaultRequestOptions))
+
+  _log: (args) ->
+    if @DEBUG
+      console.log.apply @, arguments
 
   gimmeToken: ->
     deferred = Q.defer()
@@ -54,9 +59,11 @@ class Wsapi
   doRequest: (method, options) ->
     deferred = Q.defer()
 
-    console.log 'do wsapi request', method, options
+    url = "#{@wsapiUrl}/#{options.url}"
 
-    requestOpts = _.extend {}, options, url: "#{@wsapiUrl}/#{options.url}"
+    @_log "WsapiRequest #{method} #{url}"
+
+    requestOpts = _.extend {}, options, url: url
 
     @httpRequest[method] requestOpts, (error, response, body) ->
       if error

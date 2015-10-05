@@ -1,6 +1,7 @@
 rest = require 'unirest'
 _ = require 'lodash'
 Q = require 'q'
+require 'colors'
 
 
 Ref = require '../lib/Ref'
@@ -8,8 +9,18 @@ Query = require '../lib/WsapiQuery'
 
 class Pigeon
 
-  constructor: (@wsapi) ->
+  constructor: (@wsapi, @DEBUG = false) ->
+
+    @user_data_cache = {}
+
+    @_log 'Debug output is on...'.red
+
     @pigeonUrl = "#{@wsapi.server}/notifications/api/v1"
+
+
+  _log: (args) ->
+    if @DEBUG
+      console.log.apply @, arguments
 
   request: (method, url) ->
     deferred = Q.defer()
@@ -22,7 +33,9 @@ class Pigeon
 
     deferred.promise
 
-  getWatches: (username) ->
+  getWatches: (username = @wsapi.username) ->
+    @_log "getWatches for user #{username}"
+
     @get_uuid_for_user(username).then (user_uuid) =>
       @request('get', "#{@pigeonUrl}/watch/user/#{user_uuid}")
 
@@ -34,7 +47,7 @@ class Pigeon
       @_query_for_artifacts(options).then (results) ->
         uuids = _.pluck(result.Results, '_refObjectUUID')
 
-        console.log "Getting watch rules for user #{watch_user}"
+        @_log "Getting watch rules for user #{watch_user}"
 
         Q.all _.map uuids, (artifact_uuid) ->
           @_getWatchRule user_uuid, artifact_uuid
@@ -43,7 +56,9 @@ class Pigeon
     @request('get', "#{@pigeonUrl}/watch/user/#{artifact_uuid}/#{user_uuid}")
 
   get_uuid_for_user: (username) ->
-    @wsapi.get(url: 'user/', qs: query: Query.where('UserName', '=', username).toQueryString()).then (result) ->
+    @_log "Fetching info for user #{username}"
+
+    @wsapi.get(url: 'user/', qs: query: Query.where('UserName', '=', username).toQueryString()).then (result) =>
       result.Results?[0]._refObjectUUID
 
   _query_for_artifacts: (options = {}) ->
@@ -51,10 +66,10 @@ class Pigeon
 
     if options.query?
       query = options.query
-      console.log "Fetching artifacts with query string #{query}..."
+      @_log "Fetching artifacts with query string #{query}..."
       wsapiOpts.qs = query: query
 
-      @wsapi.get(wsapiOpts)
+    @wsapi.get(wsapiOpts)
 
   # options can optionaly contain a username or a wsapi query
   watch: (options = {}) ->
@@ -65,16 +80,21 @@ class Pigeon
       @_query_for_artifacts(options).then (result) =>
         uuids = _.pluck(result.Results, '_refObjectUUID')
 
-        console.log "Found #{result.TotalResultCount} artifacts."
-        console.log "Watching #{uuids.length} artifacts for #{watch_user}..."
+        @_log "Found #{result.TotalResultCount} artifacts."
+        @_log "Watching #{uuids.length} artifacts for #{watch_user}..."
 
         watches = _.map uuids, (artifact_uuid) =>
           @_watch(user_uuid, artifact_uuid)
 
-        Q.all(watches).then (results) ->
-          successful: _.filter results, status: 200
-          alreadyUnwatched: _.filter results, status: 409
-          failed: _.filter results, (result) -> result.status isnt 200 and result.status isnt 409
+        Q.all(watches).then (results) =>
+          results =
+            successful: _.filter results, status: 200
+            alreadyWatched: _.filter results, status: 409
+            failed: _.filter results, (result) -> result.status isnt 200 and result.status isnt 409
+
+          @_log "Watch results: successful #{results.successful.length}, already watched #{results.alreadyWatched.length}, failed #{results.failed.length}"
+
+          results
 
   # options can optionaly contain a username or a wsapi query
   unwatch: (options = {}) ->
@@ -85,17 +105,27 @@ class Pigeon
       @_query_for_artifacts(options).then (result) =>
         uuids = _.pluck(result.Results, '_refObjectUUID')
 
-        console.log "Found #{result.TotalResultCount} artifacts."
-        console.log "Unwatching #{uuids.length} artifacts..."
+        @_log "Found #{result.TotalResultCount} artifacts."
+        @_log "Unwatching #{uuids.length} artifacts..."
 
         watches = _.map uuids, (artifact_uuid) =>
           @_unwatch(user_uuid, artifact_uuid)
 
-        Q.all(watches)
+        Q.all(watches).then (results) =>
+          results =
+            successful: _.filter results, status: 200
+            alreadyUnwatched: _.filter results, status: 404
+            failed: _.filter results, (result) -> result.status isnt 200 and result.status isnt 404
+
+          @_log "Unwatch results: successful #{results.successful.length}, already unwatched #{results.alreadyUnwatched.length}, failed #{results.failed.length}"
+
+          results
 
   # Internal methods operate only on UUIDs
   _watch: (user_uuid, artifact_uuid) ->
-    @request('post', "#{@pigeonUrl}/watch/#{artifact_uuid}/user/#{user_uuid}")
+    url = "#{@pigeonUrl}/watch/#{artifact_uuid}/user/#{user_uuid}"
+    # @_log "pigeon POST #{url}"
+    @request 'post', url
 
   # Internal methods operate only on UUIDs
   _unwatch: (user_uuid, artifact_uuid) ->
@@ -115,8 +145,9 @@ init = (cli_args) ->
     username: username
     password: password
     server: server
+    debug: cli_args.debug
 
-  new Pigeon wsapi
+  new Pigeon wsapi, cli_args.debug
 
 module.exports =
   init: init
