@@ -1,4 +1,3 @@
-Q = require 'q'
 request = require 'request'
 _ = require 'lodash'
 
@@ -32,64 +31,61 @@ class Wsapi
       console.log.apply @, ['debug: '.red].concat args
 
   gimmeToken: ->
-    deferred = Q.defer()
+    new Promise (resolve, reject) =>
+      if @_token
+        resolve(@_token)
+        return
 
-    if @_token
-      deferred.resolve(@_token)
-      return deferred.promise
+      @httpRequest.get "#{@wsapiUrl}/security/authorize", {}, (err, response, body) =>
+        if err
+          reject err
+          return
 
-    @httpRequest.get "#{@wsapiUrl}/security/authorize", {}, (err, response, body) =>
-      if err
-        deferred.reject err
-        return deferred.promise
+        token = body.OperationResult?.SecurityToken
 
-      token = body.OperationResult?.SecurityToken
+        if !token? or token.length < 10
+          @_log "Invalid username / password: #{@username} #{@password}"
+          reject 'Invalid username / password!'
+          return
 
-      if !token? or token.length < 10
-        @_log 'Invalid username / password!'
-        deferred.reject 'Invalid username / password!'
+        @_log "Got new token: #{token}"
 
-      @_log "Got new token: #{token}"
+        @_token = token
+        resolve token
 
-      @_token = token
-      deferred.resolve token
-
-    deferred.promise
 
   doSecuredRequest: (method, options) ->
-    @gimmeToken().then((token) =>
+    @gimmeToken().then (token) =>
       @doRequest(method, _.merge({qs: key: token}, options))
-    )
 
   doRequest: (method, options) ->
-    deferred = Q.defer()
+    new Promise (resolve, reject) =>
 
-    url = "#{@wsapiUrl}/#{options.url}"
+      url = "#{@wsapiUrl}/#{options.url}"
 
-    @_log "WsapiRequest #{method} #{url} #{JSON.stringify(options)}"
+      @_log "WsapiRequest #{method} #{url} #{JSON.stringify(options)}"
 
-    requestOpts = _.extend {}, options, url: url
+      requestOpts = _.extend {}, options, url: url
 
-    @httpRequest[method] requestOpts, (error, response, body) =>
-      if error
-        @_log "Request error: ", error
-        deferred.reject error
-      else if !response
-        @_log "Unable to connect to server: #{@wsapiUrl}"
-        deferred.reject("Unable to connect to server: #{@wsapiUrl}");
-      else if !body or !_.isObject(body)
-        @_log "Request error: #{options.url}: #{response.statusCode}! body=#{body}"
-        deferred.reject("#{options.url}: #{response.statusCode}! body=#{body}");
-      else
-        result = _.values(body)[0]
-        if result.Errors.length
-          @_log "Request error: ", result.Errors
-          deferred.reject result.Errors
+      @httpRequest[method] requestOpts, (error, response, body) =>
+        if error
+          @_log "Request error: ", error
+          reject error
+        else if !response
+          @_log "Unable to connect to server: #{@wsapiUrl}"
+          reject "Unable to connect to server: #{@wsapiUrl}"
+        else if !body or !_.isObject(body)
+          @_log "Request error: #{options.url}: #{response.statusCode}! body=#{body}"
+          reject "#{options.url}: #{response.statusCode}! body=#{body}"
         else
-          @_log "WsapiRequest Response: Success! TotalResultCount: #{result.TotalResultCount}"
-          deferred.resolve result
+          result = _.values(body)[0]
+          if result.Errors.length
+            @_log "Request error: ", result.Errors
+            reject result.Errors
+          else
+            @_log "WsapiRequest Response: Success! TotalResultCount: #{result.TotalResultCount}"
+            resolve result
 
-    deferred.promise
 
   get: (options) -> @doSecuredRequest 'get', options
   post: (options) -> @doSecuredRequest 'post', options

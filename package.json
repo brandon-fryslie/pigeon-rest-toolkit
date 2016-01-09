@@ -7,16 +7,13 @@
     "dev": "./bin/pigeon --debug"
   },
   "author": "Brandon Fryslie",
-  "license": "ISC",
+  "license": "Public Domain",
   "dependencies": {
-    "backbone-collection": "^1.0.6",
-    "backbone-model": "^1.0.9",
     "coffee-script": "^1.10.0",
     "colors": "^1.1.2",
+    "es6-promise": "^3.0.2",
     "lodash": "^3.10.1",
-    "q": "^1.4.1",
-    "unirest": "^0.4.2",
-    "zepto": "0.0.4"
+    "unirest": "^0.4.2"
   },
   "devDependencies": {
     "electron-prebuilt": "^0.33.3"

@@ -29,7 +29,7 @@
               debugger
 
 
-          Q.all(watches).then((results) ->
+          Promise.all(watches).then((results) ->
 
             successes = _.filter(results, {status: 200});
             alreadyWatched = _.filter(results, {status: 409});
@@ -67,7 +67,7 @@
 
           watches = _.map uuids, (artifact_uuid) -> pigeon.unwatch user_uuid, artifact_uuid
 
-          Q.all(watches).then (results) ->
+          Promise.all(watches).then (results) ->
 
             successes = _.filter(results, {status: 200});
             alreadyUnwatched = _.filter(results, {status: 404});

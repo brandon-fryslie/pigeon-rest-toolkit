@@ -10,7 +10,7 @@ clrs = [
   ((s) -> s.bgBlue)
   ((s) -> s.bgYellow.black)
   ((s) -> s.bgRed)
-]
+  ]
 clr_idx = 0
 get_color_fn = -> clrs[clr_idx++ % clrs.length]
 
