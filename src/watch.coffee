@@ -55,7 +55,7 @@ module.exports =
   # Internal methods operate only on UUIDs
   _watch: (user_uuid, artifact_uuid) ->
     url = "#{@pigeonUrl}/watch/#{artifact_uuid}/user/#{user_uuid}"
-    # @_log "pigeon POST #{url}"
+    @_log "pigeon POST #{url}"
     @request 'post', url
 
   # Internal methods operate only on UUIDs

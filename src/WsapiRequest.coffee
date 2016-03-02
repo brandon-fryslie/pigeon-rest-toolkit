@@ -24,7 +24,12 @@ class Wsapi
 
     @_log "Initialized WSAPI: #{@server} #{@username}"
 
-    @httpRequest = request.defaults(_.merge({auth: {user: options.username, pass: options.password, sendImmediately: false}}, @defaultRequestOptions))
+    @httpRequest = request.defaults _.merge
+      auth:
+        user: options.username
+        pass: options.password
+        sendImmediately: false
+    , @defaultRequestOptions
 
   _log: (args...) ->
     if @DEBUG
@@ -41,7 +46,9 @@ class Wsapi
           reject err
           return
 
-        token = body.OperationResult?.SecurityToken
+        cookie = _.find response.headers['set-cookie'], (s) -> s.match /^ZSESSIONID/
+        match = cookie.match /^ZSESSIONID=([^;]+)/
+        token = match[1]
 
         if !token? or token.length < 10
           @_log "Invalid username / password: #{@username} #{@password}"

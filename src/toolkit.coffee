@@ -21,8 +21,11 @@ class Pigeon
 
   request: (method, url) ->
     new Promise (resolve, reject) =>
+
       @wsapi.gimmeToken().then (token) =>
-        rest[method](url).jar(true)
+        # @_log method, url, token
+        rest[method](url)
+        .header(zuul: token)
         .send()
         .end (response) ->
           resolve(response)
