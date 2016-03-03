@@ -46,14 +46,19 @@ class Wsapi
           reject err
           return
 
-        cookie = _.find response.headers['set-cookie'], (s) -> s.match /^ZSESSIONID/
-        match = cookie.match /^ZSESSIONID=([^;]+)/
-        token = match[1]
+        if response.statusCode is 500
+          msg = "Did not find running ALM at #{@server}"
+          @_log msg
+          return reject msg
+
+        cookie = _.find response.headers['set-cookie'], (s) -> s?.match /^ZSESSIONID/
+        if cookie?
+          match = cookie.match /^ZSESSIONID=([^;]+)/
+          token = match[1]
 
         if !token? or token.length < 10
           @_log "Invalid username / password: #{@username} #{@password}"
-          reject 'Invalid username / password!'
-          return
+          return reject 'Invalid username / password!'
 
         @_log "Got new token: #{token}"
 
