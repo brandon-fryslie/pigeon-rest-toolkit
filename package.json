@@ -1,6 +1,6 @@
 {
   "name": "pigeon-rest-toolkit",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Toolkit for communicating with Rally Software Pigeon's REST API",
   "main": "index.js",
   "scripts": {
